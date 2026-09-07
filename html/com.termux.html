@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>com.termux</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+            font-size: 18px;
+            line-height: 1.6;
+            text-align: left;
+        }
+
+        .terminal {
+            width: 100%;
+            text-align: left;
+            white-space: pre-wrap;
+        }
+
+        a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .command {
+            margin-top: 20px;
+        }
+
+        #commandInput {
+            background: #000;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-family: monospace;
+            font-size: 18px;
+            width: calc(100% - 30px);
+        }
+
+        .hint {
+            margin-top: 10px;
+            color: #fff;
+        }
+
+        #success {
+            display: none;
+            margin-top: 40px;
+            color: #00ff00;
+            font-size: 42px;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="terminal">Welcome to Termux!
+
+Docs:        <a href="https://termux.dev/docs" target="_blank">https://termux.dev/docs</a>
+Donate:      <a href="https://termux.dev/donate" target="_blank">https://termux.dev/donate</a>
+Community:   <a href="https://termux.dev/community" target="_blank">https://termux.dev/community</a>
+
+Working with packages:
+
+  - Search:   pkg search &lt;query&gt;
+  - Install:  pkg install &lt;package&gt;
+  - Upgrade:  pkg upgrade
+
+Subscribing to additional repositories:
+
+  - Root:     pkg install root-repo
+  - X11:      pkg install x11-repo
+
+For fixing any repository issues,
+try 'termux-change-repo' command.
+
+Report issues at:
+https://termux.dev/issues
+
+<div class="command">~$<input id="commandInput" value="wayland --start && firefox" autofocus></div>
+<div id="success">
+Termux firefox in Termux XWayland started successfully !
+</div>
+
+</div>
+
+<script>
+    const commandInput = document.getElementById("commandInput");
+    const success = document.getElementById("success");
+
+    commandInput.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+
+            if (commandInput.value.trim() === "wayland --start && firefox") {
+                success.style.display = "block";
+            } else {
+                success.style.display = "none";
+            }
+        }
+    });
+
+    // Remet le focus dans le terminal si l'utilisateur clique ailleurs.
+    document.addEventListener("click", function() {
+        commandInput.focus();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Android Linux</title>
+    <link rel="icon" type="image/png" href="./com.android.png">
+      <link rel="apple-touch-icon" href="./com.android.png">
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #000;
+      color: #fff;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      background:
+        linear-gradient(to bottom, rgba(0,0,0,.10), rgba(0,0,0,.30)),
+        url("./com.android.wallpaper.jpg") center center / cover no-repeat;
+      position: relative;
+      user-select: none;
+    }
+
+    /* Tiroir de notifications */
+    .notification-drawer {
+      position: fixed;
+      z-index: 40;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: min(72vh, 620px);
+      padding: max(12px, env(safe-area-inset-top)) 22px 28px;
+      background: rgba(20, 24, 27, .94);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: 0 0 24px 24px;
+      box-shadow: 0 12px 35px rgba(0,0,0,.38);
+      transform: translateY(-105%);
+      transition: transform .28s cubic-bezier(.2,.8,.2,1);
+      display: flex;
+      flex-direction: column;
+      color: #fff;
+      overflow-y: auto;
+    }
+
+    .notification-drawer.open {
+      transform: translateY(0);
+    }
+
+    .drawer-handle {
+      width: 42px;
+      height: 4px;
+      margin: 4px auto 18px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.42);
+      flex-shrink: 0;
+    }
+
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .drawer-header > span:first-child {
+      font-size: 24px;
+      font-weight: 500;
+    }
+
+    .drawer-title {
+      flex: 1;
+      opacity: .7;
+    }
+
+    .close-drawer {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,.10);
+      color: #fff;
+      font-size: 26px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    /* Notification Termux Android Style */
+    .notification-card {
+      background: #f4f6f6;
+      color: #191c1d;
+      border-radius: 24px;
+      padding: 16px 20px;
+      margin-top: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+
+    .notif-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #3f484a;
+    }
+
+    .notif-app-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .notif-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #3e636d;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: bold;
+      font-family: monospace;
+    }
+
+    .notif-chevron {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.05);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      color: #191c1d;
+    }
+
+    .notif-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-left: 36px;
+    }
+
+    .notif-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #191c1d;
+    }
+
+    .notif-sub {
+      font-size: 15px;
+      color: #3f484a;
+    }
+
+    .notif-actions {
+      display: flex;
+      gap: 24px;
+      margin-left: 36px;
+      margin-top: 8px;
+    }
+
+    .notif-action-btn {
+      background: transparent;
+      border: none;
+      color: #006874;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .notif-action-btn:active {
+      opacity: 0.6;
+    }
+
+    .notification-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: rgba(255,255,255,.58);
+      font-size: 15px;
+      min-height: 200px;
+    }
+
+    .empty-icon {
+      width: 58px;
+      height: 58px;
+      border: 2px solid rgba(255,255,255,.35);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 27px;
+    }
+
+    .notification-zone {
+      position: fixed;
+      z-index: 30;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 34px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .notification-zone.hidden {
+      display: none;
+    }
+
+    .drawer-open .content,
+    .drawer-open .navigation {
+      filter: brightness(.72);
+      transition: filter .28s ease;
+    }
+
+    /* Zone centrale */
+    .content {
+      position: absolute;
+      inset: 34px 0 76px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      text-align: center;
+      z-index: 1;
+    }
+
+    /* Horloge numérique minimaliste style Android */
+    .digital-clock-widget {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .time-display {
+      font-size: 110px;
+      font-weight: 300;
+      color: #9ee3f0;
+      line-height: 0.9;
+      letter-spacing: -3px;
+      text-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    .date-display {
+      font-size: 22px;
+      font-weight: 400;
+      color: #ffffff;
+      margin-top: 12px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+
+    /* Grille d'applications */
+    .apps-container {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+    }
+
+    .app img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      border-radius: 16px;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,.45));
+      transition: transform .15s ease;
+    }
+
+    .app:active img {
+      transform: scale(0.92);
+    }
+
+    .app-name {
+      font-size: 16px;
+      font-weight: 500;
+      color: #fff;
+      text-shadow: 0 2px 6px rgba(0,0,0,.75);
+    }
+
+    /* Toast Notification Widget */
+    .widget-toast {
+      position: fixed;
+      bottom: 96px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #f2f2f2;
+      color: #1c1c1e;
+      padding: 16px 36px;
+      border-radius: 50px;
+      font-size: 17px;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+      opacity: 0.95;
+      transition: transform 0.15s ease, opacity 0.3s ease;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .widget-toast:active {
+      transform: translateX(-50%) scale(0.95);
+    }
+
+    /* Iframe d'exécution */
+    .app-iframe {
+      position: fixed;
+      top: 34px;
+      left: 0;
+      right: 0;
+      bottom: 76px;
+      width: 100%;
+      height: calc(100vh - 110px);
+      border: 0;
+      background: #000;
+      z-index: 10;
+      display: none;
+    }
+
+    /* Vue des applications récentes */
+    .recents-overlay {
+      position: fixed;
+      top: 34px;
+      left: 0;
+      right: 0;
+      bottom: 76px;
+      background: rgba(10, 14, 18, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .recents-overlay.open {
+      display: flex;
+    }
+
+    .recent-card {
+      width: 170px;
+      height: 270px;
+      background: rgba(30, 35, 42, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .recent-card:active {
+      transform: scale(0.96);
+    }
+
+    .recent-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .recent-card-header img {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+    }
+
+    .recent-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recent-card-preview {
+      flex: 1;
+      width: 100%;
+      margin: 10px 0;
+      background: #000;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .recent-card-close {
+      background: rgba(255, 255, 255, 0.12);
+      border: 0;
+      color: #fff;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .recent-card-close:active {
+      background: rgba(255, 80, 80, 0.4);
+    }
+
+    /* Barre de navigation */
+    .navigation {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 76px;
+      padding: 0 9%;
+      padding-bottom: env(safe-area-inset-bottom);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, .12);
+      z-index: 30;
+    }
+
+    .nav-button {
+      width: 52px;
+      height: 52px;
+      border: 0;
+      outline: 0;
+      padding: 0;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .back-icon {
+      width: 0;
+      height: 0;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-right: 20px solid #fff;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,.25));
+    }
+
+    .home-icon {
+      width: 23px;
+      height: 23px;
+      background: #fff;
+      border-radius: 50%;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,.25));
+    }
+
+    .recent-icon {
+      width: 21px;
+      height: 21px;
+      background: #fff;
+      border-radius: 3px;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,.25));
+    }
+
+    .nav-button:active {
+      transform: scale(.88);
+    }
+
+    @media (max-height: 650px) {
+      .content { gap: 14px; }
+      .time-display { font-size: 80px; }
+      .app img { width: 56px; height: 56px; }
+      .app-name { font-size: 14px; }
+      .navigation { height: 62px; }
+      .app-iframe, .recents-overlay { bottom: 62px; height: calc(100vh - 96px); }
+      .widget-toast { bottom: 74px; font-size: 15px; padding: 12px 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tiroir de notifications -->
+  <section class="notification-drawer" id="notificationDrawer" aria-label="Tiroir de notifications">
+    <div class="drawer-handle"></div>
+    <div class="drawer-header">
+      <span id="drawerTime">00:00</span>
+      <span class="drawer-title">Notifications</span>
+      <button class="close-drawer" id="closeDrawer" aria-label="Fermer">×</button>
+    </div>
+
+    <!-- Notification Termux -->
+    <div class="notification-card" id="notifTermux" style="display: none;">
+      <div class="notif-header">
+        <div class="notif-app-info">
+          <div class="notif-icon">&gt;_</div>
+          <span>Termux</span>
+        </div>
+        <div class="notif-chevron">▲</div>
+      </div>
+      <div class="notif-body">
+        <div class="notif-title">Termux</div>
+        <div class="notif-sub">1 session</div>
+      </div>
+      <div class="notif-actions">
+        <button class="notif-action-btn" id="notifExit">Exit</button>
+        <button class="notif-action-btn" id="notifWakelock">Acquire wakelock</button>
+      </div>
+    </div>
+
+    <!-- État vide -->
+    <div class="notification-empty" id="notificationEmpty">
+      <div class="empty-icon">✓</div>
+      <div>Aucune notification</div>
+    </div>
+  </section>
+
+  <button class="notification-zone" id="notificationZone"
+          aria-label="Ouvrir le tiroir de notifications"></button>
+
+  <!-- Écran d'accueil -->
+  <main class="content">
+    
+    <!-- Horloge numérique moderne -->
+    <div class="digital-clock-widget">
+      <div class="time-display" id="digitalTime">00:00</div>
+      <div class="date-display" id="digitalDate">dim. 6 sept.</div>
+    </div>
+
+    <!-- Icônes des applications -->
+    <div class="apps-container">
+      <div class="app" id="btnXWayland">
+        <img src="./src/main/mipmap-hdpi/ic_launcher_round.webp"
+             alt="Icône Termux XWayland"
+             onerror="this.style.opacity='.25'">
+        <div class="app-name">Termux XWayland</div>
+      </div>
+
+      <div class="app" id="btnTermux">
+        <img src="./com.termux_ic_launcher.png"
+             alt="Icône Termux"
+             onerror="this.style.opacity='.25'">
+        <div class="app-name" id="labelTermux">Termux</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Notification Toast Widget (Cliquable) -->
+  <div class="widget-toast" id="widgetToast">
+    Impossible de charger le widget
+  </div>
+
+  <!-- Frame d'exécution des applications -->
+  <iframe class="app-iframe" id="appIframe"></iframe>
+
+  <!-- Vue des applications récentes -->
+  <div class="recents-overlay" id="recentsOverlay">
+    <div class="recent-card" id="cardXWayland" style="display: none;">
+      <div class="recent-card-header">
+        <img src="./src/main/mipmap-hdpi/ic_launcher_round.webp" alt="">
+        <span class="recent-card-title">Termux XWayland</span>
+      </div>
+      <div class="recent-card-preview">En cours</div>
+      <button class="recent-card-close" id="closeXWayland">Fermer</button>
+    </div>
+
+    <div class="recent-card" id="cardTermux" style="display: none;">
+      <div class="recent-card-header">
+        <img src="./com.termux_ic_launcher_round.png" alt="">
+        <span class="recent-card-title">Termux</span>
+      </div>
+      <div class="recent-card-preview">En cours</div>
+      <button class="recent-card-close" id="closeTermux">Fermer</button>
+    </div>
+
+    <div id="noRecentsMsg" style="color: rgba(255,255,255,0.6); font-size: 15px; display: none;">
+      Aucune application récente
+    </div>
+  </div>
+
+  <!-- Barre de navigation Android -->
+  <nav class="navigation" aria-label="Navigation système">
+    <button class="nav-button" aria-label="Retour" id="navBack">
+      <span class="back-icon"></span>
+    </button>
+
+    <button class="nav-button" aria-label="Accueil" id="navHome">
+      <span class="home-icon"></span>
+    </button>
+
+    <button class="nav-button" aria-label="Applications récentes" id="navRecent">
+      <span class="recent-icon"></span>
+    </button>
+  </nav>
+
+  <script>
+    const drawer = document.getElementById("notificationDrawer");
+    const notificationZone = document.getElementById("notificationZone");
+    const closeDrawer = document.getElementById("closeDrawer");
+    const drawerTime = document.getElementById("drawerTime");
+
+    const notifTermux = document.getElementById("notifTermux");
+    const notificationEmpty = document.getElementById("notificationEmpty");
+    const notifExit = document.getElementById("notifExit");
+    const notifWakelock = document.getElementById("notifWakelock");
+
+    const widgetToast = document.getElementById("widgetToast");
+    const appIframe = document.getElementById("appIframe");
+    const btnXWayland = document.getElementById("btnXWayland");
+    const btnTermux = document.getElementById("btnTermux");
+    const labelTermux = document.getElementById("labelTermux");
+
+    const recentsOverlay = document.getElementById("recentsOverlay");
+    const cardXWayland = document.getElementById("cardXWayland");
+    const cardTermux = document.getElementById("cardTermux");
+    const noRecentsMsg = document.getElementById("noRecentsMsg");
+    const closeXWayland = document.getElementById("closeXWayland");
+    const closeTermux = document.getElementById("closeTermux");
+
+    const navBack = document.getElementById("navBack");
+    const navHome = document.getElementById("navHome");
+    const navRecent = document.getElementById("navRecent");
+
+    // État des applications
+    const openApps = {
+      xwayland: false,
+      termux: false
+    };
+    let activeApp = null;
+    let wakelockAcquired = false;
+
+    function updateNotifications() {
+      if (openApps.termux) {
+        notifTermux.style.display = "flex";
+        notificationEmpty.style.display = "none";
+      } else {
+        notifTermux.style.display = "none";
+        notificationEmpty.style.display = "flex";
+      }
+    }
+
+    function setDrawer(open) {
+      drawer.classList.toggle("open", open);
+      document.body.classList.toggle("drawer-open", open);
+      notificationZone.classList.toggle("hidden", open);
+    }
+
+    notificationZone.addEventListener("click", () => setDrawer(true));
+    closeDrawer.addEventListener("click", () => setDrawer(false));
+
+    function launchApp(appKey, url) {
+      openApps[appKey] = true;
+      activeApp = appKey;
+      appIframe.src = url;
+      appIframe.style.display = "block";
+      widgetToast.style.display = "none";
+      recentsOverlay.classList.remove("open");
+      updateNotifications();
+    }
+
+    function closeAppTask(appKey) {
+      openApps[appKey] = false;
+      if (activeApp === appKey) {
+        activeApp = null;
+        appIframe.style.display = "none";
+        appIframe.src = "about:blank";
+        widgetToast.style.display = "flex";
+      }
+      renderRecents();
+      updateNotifications();
+    }
+
+    function renderRecents() {
+      const hasXWayland = openApps.xwayland;
+      const hasTermux = openApps.termux;
+
+      cardXWayland.style.display = hasXWayland ? "flex" : "none";
+      cardTermux.style.display = hasTermux ? "flex" : "none";
+
+      if (!hasXWayland && !hasTermux) {
+        noRecentsMsg.style.display = "block";
+      } else {
+        noRecentsMsg.style.display = "none";
+      }
+    }
+
+    // Actions dans la notification Termux
+    notifExit.addEventListener("click", () => {
+      labelTermux.textContent = "Termux";
+      closeAppTask("termux");
+    });
+
+    notifWakelock.addEventListener("click", () => {
+      wakelockAcquired = !wakelockAcquired;
+      notifWakelock.textContent = wakelockAcquired ? "Release wakelock" : "Acquire wakelock";
+    });
+
+    // Lancement de Termux XWayland via le widget toast
+    widgetToast.addEventListener("click", () => {
+      launchApp("xwayland", "./com.termux.wayland.html");
+    });
+
+    // Lancement des applications via leurs icônes
+    btnXWayland.addEventListener("click", () => {
+      launchApp("xwayland", "./com.termux.wayland.html");
+    });
+
+    btnTermux.addEventListener("click", () => {
+      labelTermux.textContent = "Termux";
+      launchApp("termux", "./com.termux.html");
+    });
+
+    // Basculer vers l'application depuis la carte des récents
+    cardXWayland.addEventListener("click", (e) => {
+      if (e.target.classList.contains("recent-card-close")) return;
+      activeApp = "xwayland";
+      appIframe.src = "./com.termux.wayland.html";
+      appIframe.style.display = "block";
+      widgetToast.style.display = "none";
+      recentsOverlay.classList.remove("open");
+    });
+
+    cardTermux.addEventListener("click", (e) => {
+      if (e.target.classList.contains("recent-card-close")) return;
+      activeApp = "termux";
+      appIframe.src = "./com.termux.html";
+      appIframe.style.display = "block";
+      widgetToast.style.display = "none";
+      recentsOverlay.classList.remove("open");
+    });
+
+    // Fermeture des tâches
+    closeXWayland.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeAppTask("xwayland");
+    });
+
+    closeTermux.addEventListener("click", (e) => {
+      e.stopPropagation();
+      labelTermux.textContent = "Termux";
+      closeAppTask("termux");
+    });
+
+    // Bouton de navigation : Applications récentes
+    navRecent.addEventListener("click", () => {
+      const isOpen = recentsOverlay.classList.contains("open");
+      if (isOpen) {
+        recentsOverlay.classList.remove("open");
+        if (activeApp) {
+          appIframe.style.display = "block";
+          widgetToast.style.display = "none";
+        } else {
+          widgetToast.style.display = "flex";
+        }
+      } else {
+        renderRecents();
+        appIframe.style.display = "none";
+        widgetToast.style.display = "none";
+        recentsOverlay.classList.add("open");
+      }
+    });
+
+    // Bouton de navigation : Retour
+    navBack.addEventListener("click", () => {
+      if (recentsOverlay.classList.contains("open")) {
+        recentsOverlay.classList.remove("open");
+        if (activeApp) {
+          appIframe.style.display = "block";
+          widgetToast.style.display = "none";
+        } else {
+          widgetToast.style.display = "flex";
+        }
+      } else if (appIframe.style.display === "block") {
+        appIframe.style.display = "none";
+        widgetToast.style.display = "flex";
+      } else {
+        history.back();
+      }
+    });
+
+    // Bouton de navigation : Accueil
+    navHome.addEventListener("click", () => {
+      recentsOverlay.classList.remove("open");
+      appIframe.style.display = "none";
+      widgetToast.style.display = "flex";
+    });
+
+    // Glissement du tiroir
+    let touchStartY = null;
+
+    document.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener("touchend", (e) => {
+      if (touchStartY === null || e.changedTouches.length !== 1) return;
+      const delta = e.changedTouches[0].clientY - touchStartY;
+
+      if (!drawer.classList.contains("open") && touchStartY < 70 && delta > 70) {
+        setDrawer(true);
+      } else if (drawer.classList.contains("open") && delta < -70) {
+        setDrawer(false);
+      }
+      touchStartY = null;
+    }, { passive: true });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        setDrawer(false);
+        recentsOverlay.classList.remove("open");
+        if (activeApp) {
+          appIframe.style.display = "block";
+          widgetToast.style.display = "none";
+        } else {
+          widgetToast.style.display = "flex";
+        }
+      }
+    });
+
+    function updateClock() {
+      const now = new Date();
+
+      const h = now.getHours();
+      const m = now.getMinutes();
+
+      // Heure dynamique au format HH:MM
+      const timeText = [h, m].map(v => String(v).padStart(2, "0")).join(":");
+      document.getElementById("digitalTime").textContent = timeText;
+      drawerTime.textContent = timeText;
+
+      // Date dynamique en français
+      const options = { weekday: 'short', day: 'numeric', month: 'short' };
+      const dateText = now.toLocaleDateString('fr-FR', options);
+      document.getElementById("digitalDate").textContent = dateText;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>
