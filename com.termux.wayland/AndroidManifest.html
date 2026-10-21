@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termux XWayland</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+        }
+
+        /* ----- Aucune session ----- */
+        #nosession {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 24px;
+            text-align: center;
+        }
+        #nosession .title { font-size: 20px; }
+        #nosession .hint { font-size: 14px; color: rgba(255,255,255,.65); }
+        code { background: rgba(255,255,255,.12); padding: 2px 6px; border-radius: 4px; }
+
+        /* ----- Bureau ----- */
+        #desktop {
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 8px 4px;
+            padding: 16px;
+        }
+
+        .icon {
+            width: 92px;
+            padding: 8px 4px;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: #fff;
+            font: inherit;
+            font-size: 13px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .icon:hover, .icon:focus-visible { background: rgba(255,255,255,.14); outline: none; }
+        .icon img {
+            display: block;
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 6px;
+            object-fit: contain;
+        }
+
+        [hidden] { display: none !important; }
+
+        #toast {
+            position: fixed;
+            left: 50%;
+            bottom: 20px;
+            max-width: calc(100% - 32px);
+            transform: translate(-50%, 16px);
+            padding: 12px 18px;
+            border-radius: 12px;
+            background: #e3e3e3;
+            color: #1b1b1b;
+            font-family: Roboto, "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+        #toast.show { opacity: 1; transform: translate(-50%, 0); }
+    </style>
+</head>
+<body>
+    <div id="nosession">
+        <div class="title">Aucune session Wayland</div>
+        <div class="hint">Lancez <code>wayland --start</code> dans Termux</div>
+    </div>
+
+    <main id="desktop" hidden>
+        <button class="icon" data-app="firefox"><img src="../com.termux/firefox.png" alt="">Firefox</button>
+        <button class="icon" data-app="nautilus"><img src="../com.termux/nautilus.png" alt="">Fichiers</button>
+        <button class="icon" data-app="trash"><img src="../com.termux/trash.png" alt="">Corbeille</button>
+        <button class="icon" data-app="libreoffice"><img src="../com.termux/libreoffice-main.png" alt="">LibreOffice</button>
+        <button class="icon" data-app="editor"><img src="../com.termux/text-editor.png" alt="">Éditeur de texte</button>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+    (function () {
+        "use strict";
+
+        var embedded = window.parent !== window;
+        var nosession = document.getElementById("nosession");
+        var desktop = document.getElementById("desktop");
+        var toast = document.getElementById("toast");
+        var toastTimer = null;
+        var nextId = 1;
+        var pending = {};
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add("show");
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function () { toast.classList.remove("show"); }, 3200);
+        }
+
+        function render(state) {
+            var started = !!(state && state.started);
+            nosession.hidden = started;
+            desktop.hidden = !started;
+        }
+
+        function message(code) {
+            switch (code) {
+                case "no-freeform":
+                    return "Activez « Autoriser les fenêtres de forme libre » dans Paramètres > Système > Options pour les développeurs.";
+                case "no-session":
+                    return "Aucune session Wayland active.";
+                default:
+                    return "Impossible d'ouvrir la fenêtre (" + code + ").";
+            }
+        }
+
+        window.addEventListener("message", function (e) {
+            if (e.source !== window.parent) return;
+            var d = e.data;
+            if (!d) return;
+            if (d.type === "tw-x11-state") render(d.state);
+            else if (d.type === "tw-x11-result" && pending[d.id]) {
+                pending[d.id](d);
+                delete pending[d.id];
+            }
+        });
+
+        function launch(app) {
+            if (!embedded) { showToast(message("no-launcher")); return; }
+            var id = nextId++;
+            pending[id] = function (res) { if (!res.ok) showToast(message(res.code)); };
+            setTimeout(function () { delete pending[id]; }, 1500);
+            window.parent.postMessage({ type: "tw-x11", id: id, action: "launch", app: app }, "*");
+        }
+
+        desktop.addEventListener("click", function (e) {
+            var btn = e.target.closest(".icon");
+            if (btn) launch(btn.dataset.app);
+        });
+
+        if (embedded) window.parent.postMessage({ type: "tw-x11-get" }, "*");
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>com.termux</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+            font-size: 18px;
+            line-height: 1.6;
+            text-align: left;
+        }
+
+        .terminal {
+            width: 100%;
+            text-align: left;
+            white-space: pre-wrap;
+        }
+
+        a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .command {
+            margin-top: 20px;
+        }
+
+        #commandInput {
+            background: #000;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-family: monospace;
+            font-size: 18px;
+            width: calc(100% - 30px);
+        }
+
+        .hint {
+            margin-top: 10px;
+            color: #fff;
+        }
+
+        #log div {
+            min-height: 1.6em;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="terminal">Welcome to Termux!
+
+Docs:        <a href="https://termux.dev/docs" target="_blank" rel="noopener noreferrer">https://termux.dev/docs</a>
+Donate:      <a href="https://termux.dev/donate" target="_blank" rel="noopener noreferrer">https://termux.dev/donate</a>
+Community:   <a href="https://termux.dev/community" target="_blank" rel="noopener noreferrer">https://termux.dev/community</a>
+
+Working with packages:
+
+  - Search:   pkg search &lt;query&gt;
+  - Install:  pkg install &lt;package&gt;
+  - Upgrade:  pkg upgrade
+
+Subscribing to additional repositories:
+
+  - Root:     pkg install root-repo
+  - X11:      pkg install x11-repo
+
+For fixing any repository issues,
+try 'termux-change-repo' command.
+
+Report issues at:
+https://termux.dev/issues
+
+<div id="log"></div>
+<div class="command">~$<input id="commandInput" value="wayland --start" autofocus autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command"></div>
+
+</div>
+
+<script>
+    const commandInput = document.getElementById("commandInput");
+    const log = document.getElementById("log");
+    const embedded = window.parent !== window;
+
+    /* ----- Dialogue avec le lanceur (session Wayland / fenêtres X11) ----- */
+    let nextId = 1;
+    const pending = {};
+
+    window.addEventListener("message", function(e) {
+        if (e.source !== window.parent) return;
+        const d = e.data;
+        if (d && d.type === "tw-x11-result" && pending[d.id]) {
+            pending[d.id](d);
+            delete pending[d.id];
+        }
+    });
+
+    function x11(msg) {
+        return new Promise(function(resolve) {
+            if (!embedded) { resolve({ ok: false, code: "no-launcher" }); return; }
+            const id = nextId++;
+            pending[id] = resolve;
+            setTimeout(function() {
+                if (pending[id]) { delete pending[id]; resolve({ ok: false, code: "timeout" }); }
+            }, 1500);
+            window.parent.postMessage(Object.assign({ type: "tw-x11", id: id }, msg), "*");
+        });
+    }
+
+    /* ----- Terminal ----- */
+    function print(text) {
+        const line = document.createElement("div");
+        line.textContent = text;
+        log.appendChild(line);
+    }
+
+    function errorText(code) {
+        switch (code) {
+            case "no-session":
+                return "Error: cannot open display. Start the session first with: wayland --start";
+            case "no-freeform":
+                return 'Error: freeform windows are disabled. Enable "Autoriser les fenêtres de forme libre" in Paramètres > Système > Options pour les développeurs.';
+            case "no-launcher":
+                return "Error: no display server available.";
+            default:
+                return "Error: " + code;
+        }
+    }
+
+    // Commande -> application X11 du lanceur
+    function appFor(args) {
+        switch (args[0]) {
+            case "firefox":           return "firefox";
+            case "nautilus":          return args[1] === "trash://" ? "trash" : "nautilus";
+            case "libreoffice":       return "libreoffice";
+            case "gnome-text-editor": return "editor";
+        }
+        return null;
+    }
+
+    async function exec(part) {
+        part = part.replace(/\s*&\s*$/, "").trim();     // "&" final : lancement en arrière-plan
+        if (!part) return true;
+        const args = part.split(/\s+/);
+
+        if (args[0] === "wayland") {
+            if (args.length !== 2 || args[1] !== "--start") {
+                print("Usage: wayland --start");
+                return false;
+            }
+            const r = await x11({ action: "start" });
+            if (!r.ok) { print(errorText(r.code)); return false; }
+            print(r.already ? "wayland: session already running" : "Wayland session started (XWayland ready).");
+            return true;
+        }
+
+        const app = appFor(args);
+        if (!app) {
+            print("bash: " + args[0] + ": command not found");
+            return false;
+        }
+        const r = await x11({ action: "launch", app: app });
+        if (!r.ok) { print(errorText(r.code)); return false; }
+        return true;
+    }
+
+    // "a && b" : b ne s'exécute que si a a réussi
+    async function run(line) {
+        const parts = line.split("&&");
+        for (const part of parts) {
+            if (!(await exec(part))) break;
+        }
+    }
+
+    const history = [];
+    let histPos = 0;
+
+    commandInput.addEventListener("keydown", async function(event) {
+        if (event.key === "ArrowUp" && history.length) {
+            event.preventDefault();
+            histPos = Math.max(0, histPos - 1);
+            commandInput.value = history[histPos];
+            return;
+        }
+        if (event.key === "ArrowDown" && history.length) {
+            event.preventDefault();
+            histPos = Math.min(history.length, histPos + 1);
+            commandInput.value = history[histPos] || "";
+            return;
+        }
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+
+        const cmd = commandInput.value.trim();
+        print("~$ " + commandInput.value);
+        commandInput.value = "";
+        if (cmd) { history.push(cmd); histPos = history.length; }
+
+        commandInput.disabled = true;
+        await run(cmd);
+        commandInput.disabled = false;
+        commandInput.focus();
+        window.scrollTo(0, document.body.scrollHeight);
+    });
+
+    // Remet le focus dans le terminal si l'utilisateur clique ailleurs.
+    document.addEventListener("click", function() {
+        commandInput.focus();
+    });
+</script>
+
+</body>
+</html>

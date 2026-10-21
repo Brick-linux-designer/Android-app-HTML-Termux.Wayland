@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paramètres</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body { margin: 0; min-height: 100%; }
+
+        body {
+            background: #303030;
+            color: #e3e3e3;
+            font-family: Roboto, "Segoe UI", Arial, Helvetica, sans-serif;
+            padding-bottom: 80px;
+        }
+
+        /* ---------- Barre d'application ---------- */
+        .appbar {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 64px;
+            padding: 8px 12px 8px 16px;
+            background: #303030;
+        }
+
+        .appbar h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 400;
+        }
+
+        .appbar.home { padding-top: 24px; padding-bottom: 16px; }
+        .appbar.home h1 { font-size: 30px; }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            color: #e3e3e3;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .icon-btn:hover { background: rgba(255,255,255,.1); }
+
+        /* ---------- Lignes ---------- */
+        .section-label {
+            padding: 20px 24px 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #a8c7fa;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            width: 100%;
+            padding: 14px 24px;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+        .row:hover { background: rgba(255,255,255,.05); }
+        .row:focus-visible { outline: 2px solid #a8c7fa; outline-offset: -2px; }
+        .row.static { cursor: default; }
+        .row.static:hover { background: transparent; }
+        .row.disabled { opacity: .42; pointer-events: none; }
+
+        .row .icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #3e636d;
+            display: grid;
+            place-items: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .row .text { flex: 1; min-width: 0; }
+        .row .title { font-size: 17px; }
+        .row .sub {
+            margin-top: 2px;
+            font-size: 14px;
+            line-height: 1.35;
+            color: rgba(255,255,255,.62);
+            overflow-wrap: anywhere;
+        }
+        .row .chevron { color: rgba(255,255,255,.45); font-size: 20px; }
+
+        /* ---------- Interrupteur ---------- */
+        .switch {
+            position: relative;
+            width: 52px;
+            height: 32px;
+            flex-shrink: 0;
+            border: 2px solid #8e918f;
+            border-radius: 16px;
+            transition: background .18s ease, border-color .18s ease;
+        }
+        .switch::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 6px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #8e918f;
+            transform: translateY(-50%);
+            transition: left .18s ease, width .18s ease, height .18s ease, background .18s ease;
+        }
+        .row[aria-checked="true"] .switch { background: #a8c7fa; border-color: #a8c7fa; }
+        .row[aria-checked="true"] .switch::after {
+            left: 24px;
+            width: 24px;
+            height: 24px;
+            background: #062e6f;
+        }
+
+        /* ---------- Bandeau principal (options développeur) ---------- */
+        .master {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 8px 16px 4px;
+            padding: 18px 24px;
+            border-radius: 28px;
+            background: #3e4a52;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .master[aria-checked="true"] { background: #a8c7fa; color: #062e6f; }
+        .master[aria-checked="true"] .switch { background: #062e6f; border-color: #062e6f; }
+        .master[aria-checked="true"] .switch::after { left: 24px; width: 24px; height: 24px; background: #a8c7fa; }
+
+        /* ---------- Carte appareil ---------- */
+        .device {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 24px 20px;
+            text-align: center;
+        }
+        .device .big { font-size: 56px; }
+        .device .name { font-size: 22px; }
+        .device .model { font-size: 14px; color: rgba(255,255,255,.62); }
+
+        /* ---------- Message temporaire ---------- */
+        #snack {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translate(-50%, 20px);
+            max-width: calc(100% - 32px);
+            padding: 12px 20px;
+            border-radius: 14px;
+            background: #e3e3e3;
+            color: #1b1b1b;
+            font-size: 14px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease, transform .2s ease;
+            z-index: 10;
+        }
+        #snack.show { opacity: 1; transform: translate(-50%, 0); }
+    </style>
+</head>
+<body>
+    <header class="appbar home" id="appbar">
+        <button class="icon-btn" id="back" aria-label="Retour" hidden>&#8592;</button>
+        <h1 id="title">Paramètres</h1>
+    </header>
+
+    <main id="view"></main>
+    <div id="snack" role="status" aria-live="polite"></div>
+
+    <script>
+    (function () {
+        "use strict";
+
+        /* ===== Réglages (partagés avec le lanceur via postMessage) ===== */
+        var DEFAULTS = {
+            devUnlocked: false,   // options pour les développeurs débloquées
+            devOn: false,         // interrupteur principal
+            usbDebug: false,
+            stayAwake: false,
+            freeform: false       // Autoriser les fenêtres de forme libre
+        };
+        var STORAGE_KEY = "tw_settings";
+        var state = Object.assign({}, DEFAULTS);
+        var embedded = window.parent !== window;
+
+        function load() {
+            try {
+                var s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+                Object.keys(DEFAULTS).forEach(function (k) {
+                    if (typeof s[k] === "boolean") state[k] = s[k];
+                });
+            } catch (e) { /* stockage indisponible */ }
+        }
+
+        function save() {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+            if (embedded) window.parent.postMessage({ type: "tw-settings-set", state: state }, "*");
+        }
+
+        load();
+
+        if (embedded) {
+            window.addEventListener("message", function (e) {
+                if (e.source !== window.parent) return;
+                var d = e.data;
+                if (d && d.type === "tw-settings-state" && d.state) {
+                    Object.keys(DEFAULTS).forEach(function (k) {
+                        if (typeof d.state[k] === "boolean") state[k] = d.state[k];
+                    });
+                    render();
+                }
+            });
+            window.parent.postMessage({ type: "tw-settings-get" }, "*");
+        }
+
+        /* ===== Petits utilitaires DOM ===== */
+        function el(tag, attrs) {
+            var node = document.createElement(tag);
+            attrs = attrs || {};
+            Object.keys(attrs).forEach(function (k) {
+                if (k === "class") node.className = attrs[k];
+                else if (k === "text") node.textContent = attrs[k];
+                else node.setAttribute(k, attrs[k]);
+            });
+            for (var i = 2; i < arguments.length; i++) {
+                if (arguments[i]) node.appendChild(arguments[i]);
+            }
+            return node;
+        }
+
+        var snackEl = document.getElementById("snack");
+        var snackTimer = null;
+        function snack(msg) {
+            snackEl.textContent = msg;
+            snackEl.classList.add("show");
+            clearTimeout(snackTimer);
+            snackTimer = setTimeout(function () { snackEl.classList.remove("show"); }, 2200);
+        }
+
+        function onActivate(node, fn) {
+            node.addEventListener("click", fn);
+            node.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); }
+            });
+        }
+
+        function label(text) { return el("div", { "class": "section-label", text: text }); }
+
+        function row(opts) {
+            var r = el("div", { "class": "row" + (opts.static ? " static" : ""), role: opts.static ? "group" : "button" });
+            if (!opts.static) r.tabIndex = 0;
+            if (opts.icon) r.appendChild(el("div", { "class": "icon", text: opts.icon }));
+            var text = el("div", { "class": "text" }, el("div", { "class": "title", text: opts.title }));
+            if (opts.sub) text.appendChild(el("div", { "class": "sub", text: opts.sub }));
+            r.appendChild(text);
+            if (opts.chevron) r.appendChild(el("div", { "class": "chevron", text: "\u203A" }));
+            if (opts.onClick) onActivate(r, opts.onClick);
+            return r;
+        }
+
+        function switchRow(opts) {
+            var r = el("div", { "class": "row" + (opts.disabled ? " disabled" : ""), role: "switch", tabindex: "0",
+                                "aria-checked": String(!!opts.checked) });
+            r.appendChild(el("div", { "class": "text" },
+                el("div", { "class": "title", text: opts.title }),
+                opts.sub ? el("div", { "class": "sub", text: opts.sub }) : null));
+            r.appendChild(el("div", { "class": "switch" }));
+            onActivate(r, function () { opts.onChange(!opts.checked); });
+            return r;
+        }
+
+        function soon() { snack("Indisponible dans cette version"); }
+
+        /* ===== Navigation interne ===== */
+        var stack = ["home"];
+        var appbar = document.getElementById("appbar");
+        var titleEl = document.getElementById("title");
+        var backBtn = document.getElementById("back");
+        var viewEl = document.getElementById("view");
+
+        function go(v) { stack.push(v); render(); window.scrollTo(0, 0); }
+        function back() { if (stack.length > 1) { stack.pop(); render(); } }
+        backBtn.addEventListener("click", back);
+
+        /* ===== Vues ===== */
+        var TITLES = {
+            home: "Paramètres",
+            system: "Système",
+            about: "À propos du téléphone",
+            dev: "Options pour les développeurs"
+        };
+
+        function viewHome() {
+            var online = navigator.onLine ? "Connecté" : "Hors connexion";
+            return [
+                row({ icon: "\uD83D\uDCF6", title: "Réseau et Internet", sub: online, onClick: soon }),
+                row({ icon: "\uD83D\uDDA5\uFE0F", title: "Affichage", sub: screen.width + " \u00D7 " + screen.height + " px", onClick: soon }),
+                row({ icon: "\uD83D\uDD0A", title: "Son et vibreur", sub: "Volume, sonneries", onClick: soon }),
+                row({ icon: "\uD83D\uDCBE", title: "Stockage", sub: "Stockage interne", onClick: soon }),
+                row({ icon: "\u2699\uFE0F", title: "Système", sub: "Langues, gestes, date et heure" + (state.devUnlocked ? ", options pour les développeurs" : ""),
+                      chevron: true, onClick: function () { go("system"); } }),
+                row({ icon: "\u2139\uFE0F", title: "À propos du téléphone", sub: "Web Droid JS",
+                      chevron: true, onClick: function () { go("about"); } })
+            ];
+        }
+
+        function viewSystem() {
+            var items = [
+                row({ icon: "\uD83C\uDF10", title: "Langues et saisie", sub: "Français (France)", onClick: soon }),
+                row({ icon: "\uD83D\uDC46", title: "Gestes", sub: "Navigation du système, tiroir de notifications", onClick: soon }),
+                row({ icon: "\uD83D\uDD52", title: "Date et heure", sub: "Heure automatique", onClick: soon }),
+                row({ icon: "\u2601\uFE0F", title: "Sauvegarde", sub: "Désactivée", onClick: soon })
+            ];
+            if (state.devUnlocked) {
+                items.push(row({ icon: "{ }", title: "Options pour les développeurs",
+                                 sub: state.devOn ? "Activées" : "Désactivées",
+                                 chevron: true, onClick: function () { go("dev"); } }));
+            }
+            items.push(row({ icon: "\u2B06\uFE0F", title: "Mise à jour du système", sub: "TWHTML.CANARY.261020",
+                             onClick: function () { snack("Votre système est à jour"); } }));
+            return items;
+        }
+
+        /* --- À propos : sept appuis sur le numéro de build --- */
+        var taps = 0, tapTimer = null;
+        function tapBuild() {
+            if (state.devUnlocked) { snack("Inutile, vous êtes déjà développeur."); return; }
+            taps++;
+            clearTimeout(tapTimer);
+            tapTimer = setTimeout(function () { taps = 0; }, 2500);
+            var left = 7 - taps;
+            if (left <= 0) {
+                taps = 0;
+                state.devUnlocked = true;
+                state.devOn = true;
+                save();
+                snack("Vous êtes maintenant développeur !");
+                render();
+            } else if (taps >= 4) {
+                snack("Plus que " + left + " étape" + (left > 1 ? "s" : "") + " pour devenir développeur");
+            }
+        }
+
+        function viewAbout() {
+            var nav = navigator;
+            var platform = (nav.userAgentData && nav.userAgentData.platform) || nav.platform || "Inconnue";
+            var cores = nav.hardwareConcurrency ? nav.hardwareConcurrency + " cœurs" : "Inconnu";
+            var mem = nav.deviceMemory ? "\u2248 " + nav.deviceMemory + " Go" : "Inconnue";
+            var dpr = window.devicePixelRatio || 1;
+            var devname = "Web Droid JS";
+
+            var device = el("div", { "class": "device" },
+                el("div", { "class": "big", text: "\uD83D\uDCF1" }),
+                el("div", { "class": "name", text: devname }),
+                el("div", { "class": "model", text: "Web Droid HTML/JS" }));
+
+            return [
+                device,
+                row({ static: true, title: "Nom de l'appareil", sub: devname }),
+                row({ static: true, title: "Modèle", sub: "Web Droid HTML/JS" }),
+                row({ static: true, title: "Version d'Android", sub: "16 (AOSP)" }),
+                row({ static: true, title: "Plateforme", sub: platform }),
+                row({ static: true, title: "Processeur", sub: cores }),
+                row({ static: true, title: "Mémoire (approximative)", sub: mem }),
+                row({ static: true, title: "Écran", sub: screen.width + " \u00D7 " + screen.height + " px (\u00D7" + dpr + ")" }),
+                row({ static: true, title: "Langue du système", sub: nav.language || "Inconnue" }),
+                row({ title: "Numéro de build", sub: "WEB-HTM-JCCS.STABLE.26.2", onClick: tapBuild })
+            ];
+        }
+
+        /* --- Options pour les développeurs --- */
+        function setState(key, val) {
+            state[key] = val;
+            save();
+            render();
+        }
+
+        function viewDev() {
+            var off = !state.devOn;
+
+            var master = el("div", { "class": "master", role: "switch", tabindex: "0",
+                                     "aria-checked": String(state.devOn) },
+                el("span", { text: state.devOn ? "Activé" : "Désactivé" }),
+                el("div", { "class": "switch" }));
+            onActivate(master, function () { setState("devOn", !state.devOn); });
+
+            return [
+                master,
+                label("Débogage"),
+                switchRow({ title: "Débogage USB", sub: "Mode débogage lorsqu'un câble USB est connecté",
+                            checked: state.usbDebug, disabled: off, onChange: function (v) { setState("usbDebug", v); } }),
+                switchRow({ title: "Rester activé", sub: "L'écran ne se met jamais en veille pendant la charge",
+                            checked: state.stayAwake, disabled: off, onChange: function (v) { setState("stayAwake", v); } }),
+                label("Applications"),
+                switchRow({ title: "Autoriser les fenêtres de forme libre",
+                            sub: "Certaines apps peuvent s'ouvrir dans des fenêtres flottantes que l'on peut déplacer, redimensionner et agrandir",
+                            checked: state.freeform, disabled: off, onChange: function (v) { setState("freeform", v); } })
+            ];
+        }
+
+        var VIEWS = { home: viewHome, system: viewSystem, about: viewAbout, dev: viewDev };
+
+        function render() {
+            var current = stack[stack.length - 1];
+            // La page développeur n'existe que si elle est débloquée
+            if (current === "dev" && !state.devUnlocked) { stack.pop(); current = stack[stack.length - 1]; }
+
+            appbar.className = "appbar" + (current === "home" ? " home" : "");
+            titleEl.textContent = TITLES[current];
+            backBtn.hidden = current === "home";
+
+            viewEl.textContent = "";
+            VIEWS[current]().forEach(function (node) { viewEl.appendChild(node); });
+        }
+
+        render();
+    })();
+    </script>
+</body>
+</html>
